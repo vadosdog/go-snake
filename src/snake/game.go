@@ -14,8 +14,8 @@ const (
 	SinglePlayer = iota
 	MultiPlayer  = iota
 
-	AreaCellCountW = 20
-	AreaCellCountH = 20
+	AreaCellCountW = 40
+	AreaCellCountH = 40
 )
 
 type Game struct {
@@ -39,12 +39,16 @@ func NewGame(playerCounts int) *Game {
 
 	if playerCounts >= 2 {
 		snakes = append(snakes, NewSnake("Player 2", "#ff0", geom.Coords{X: 18, Y: 18}, geom.Left, map[int]geom.Dir{CodeA: geom.Left, CodeD: geom.Right, CodeW: geom.Top, CodeS: geom.Bottom}))
+
+		snakes[1].SetBot(&bots.AStarBot{})
 	}
 	if playerCounts >= 3 {
 		snakes = append(snakes, NewSnake("Player 3", "#f00", geom.Coords{X: 1, Y: 18}, geom.Top, map[int]geom.Dir{CodeNum4: geom.Left, CodeNum6: geom.Right, CodeNum8: geom.Top, CodeNum5: geom.Bottom}))
+		snakes[2].SetBot(&bots.AStarBot{})
 	}
 	if playerCounts == 4 {
 		snakes = append(snakes, NewSnake("Player 4", "#f0f", geom.Coords{X: 18, Y: 1}, geom.Bottom, map[int]geom.Dir{CodeJ: geom.Left, CodeL: geom.Right, CodeI: geom.Top, CodeK: geom.Bottom}))
+		snakes[3].SetBot(&bots.AStarBot{})
 	}
 
 	gameMode := SinglePlayer
@@ -54,7 +58,7 @@ func NewGame(playerCounts int) *Game {
 
 	g := &Game{
 		Snakes:       snakes,
-		speed:        500,
+		speed:        50,
 		gameOver:     false,
 		playersCount: playerCounts,
 		mode:         gameMode,
@@ -77,6 +81,36 @@ func (g *Game) HandleKeyDown(code int, gp *GamePage) {
 	}
 }
 
+func (g *Game) addFood() {
+	if !g.gameOver {
+		randX := rand.Intn(AreaCellCountW)
+		randY := rand.Intn(AreaCellCountH)
+
+		newPoint := geom.Coords{X: randX, Y: randY}
+
+		check := true
+
+		for _, snake := range g.Snakes {
+			if snake.IsSnake(newPoint) {
+				check = false
+				break
+			}
+		}
+
+		if !check {
+			for _, p := range g.food {
+				if p == newPoint {
+					check = false
+					break
+				}
+			}
+		}
+
+		if check {
+			g.food = append(g.food, newPoint)
+		}
+	}
+}
 func (g *Game) foodGeneration() {
 	var foodTimer *time.Timer
 
@@ -88,40 +122,14 @@ func (g *Game) foodGeneration() {
 	for {
 		<-foodTimer.C
 
-		if !g.gameOver {
-			randX := rand.Intn(20)
-			randY := rand.Intn(20)
-
-			newPoint := geom.Coords{X: randX, Y: randY}
-
-			check := true
-
-			for _, snake := range g.Snakes {
-				if snake.IsSnake(newPoint) {
-					check = false
-					break
-				}
-			}
-
-			if !check {
-				for _, p := range g.food {
-					if p == newPoint {
-						check = false
-						break
-					}
-				}
-			}
-
-			if check {
-				g.food = append(g.food, newPoint)
-			}
-		}
+		g.addFood()
 
 		resetTimer()
 	}
 }
 
 func (g *Game) Run() {
+	//g.addFood()
 	go g.snakeMovement()
 	go g.foodGeneration()
 }
@@ -167,6 +175,7 @@ func (g *Game) snakeMovement() {
 					}
 					isFood = true
 					snake.Score++
+					g.addFood()
 					break
 				}
 			}
@@ -189,8 +198,8 @@ func (g *Game) snakeMovement() {
 
 			lose := false
 			// Check walls
-			if newPos.X < 0 || newPos.X >= 20 ||
-				newPos.Y < 0 || newPos.Y >= 20 {
+			if newPos.X < 0 || newPos.X >= AreaCellCountW ||
+				newPos.Y < 0 || newPos.Y >= AreaCellCountH {
 				lose = true
 			}
 
@@ -217,7 +226,7 @@ func (g *Game) snakeMovement() {
 		continues := 0
 		for _, snake := range g.Snakes {
 			if !snake.IsLose {
-				snake.Score += 5 * loses
+				snake.Score += loses
 				continues++
 			}
 		}
@@ -255,6 +264,9 @@ func (g *Game) fillArea() {
 	// fill snakes
 	for _, snake := range g.Snakes {
 		for _, point := range snake.Parts {
+			if g.Area.OutOfBounds(point) {
+				continue
+			}
 			g.Area.Area[point.Y][point.X].Content = geom.SnakeCell
 		}
 	}

@@ -5,12 +5,16 @@ import (
 	"snake/src/geom"
 )
 
+var AStarArea map[int]map[int]*Tile
+
 type AStarBot struct {
 	hasTarget bool
 	path      AStarBotPath
 }
 
 func (bot *AStarBot) WhatsNext(area *geom.Area, head *geom.Cell, defaultDir geom.Dir) geom.Dir {
+	fillAStarArea(area)
+
 	if bot.hasTarget {
 		if bot.path.isValid(area) {
 			return getDir(head, bot.path.GetStep())
@@ -25,7 +29,34 @@ func (bot *AStarBot) WhatsNext(area *geom.Area, head *geom.Cell, defaultDir geom
 		return getDir(head, bot.path.GetStep())
 	}
 
+	// stay in bounds
+	nextStep := defaultDir.Exec(head.Coords)
+	if !area.IsFree(nextStep) {
+		left := defaultDir.GetLeft()
+		nextStep = left.Exec(head.Coords)
+		if area.IsFree(nextStep) {
+			return left
+		}
+
+		right := defaultDir.GetRight()
+		nextStep = right.Exec(head.Coords)
+		if area.IsFree(nextStep) {
+			return right
+		}
+	}
+
 	return defaultDir
+}
+
+func fillAStarArea(area *geom.Area) {
+	AStarArea = make(map[int]map[int]*Tile, len(area.Area))
+
+	for y, rows := range area.Area {
+		AStarArea[y] = make(map[int]*Tile, len(area.Area[0]))
+		for x, cell := range rows {
+			AStarArea[y][x] = &Tile{Cell: cell, Area: area}
+		}
+	}
 }
 
 func (bot *AStarBot) CalcPaths(area *geom.Area, head *geom.Cell) {
@@ -75,8 +106,9 @@ func (path *AStarBotPath) isValid(area *geom.Area) bool {
 }
 
 func (path *AStarBotPath) GetStep() *geom.Cell {
-	tile := path.Path[0]
-	path.Path = path.Path[1:]
+	l := len(path.Path)
+	tile := path.Path[l-1]
+	path.Path = path.Path[:l-1]
 
 	return tile.Cell
 }
@@ -89,20 +121,24 @@ func getDir(head *geom.Cell, next *geom.Cell) geom.Dir {
 		return geom.Left
 	}
 	if next.Coords.Y > head.Coords.Y {
-		return geom.Top
+		return geom.Bottom
 	}
-	return geom.Bottom
+	return geom.Top
 }
 
 func getPath(food *geom.Cell, area *geom.Area, head *geom.Cell) (AStarBotPath, bool) {
-	path, l, found := astar.Path(&Tile{Cell: head, Area: area}, &Tile{Cell: food, Area: area})
+	path, l, found := astar.Path(AStarArea[head.Coords.Y][head.Coords.X], AStarArea[food.Coords.Y][food.Coords.X])
 
 	if !found {
 		return AStarBotPath{}, false
 	}
 
 	var tilePath []*Tile
-	for _, pather := range path {
+	for i, pather := range path {
+		if i == len(path)-1 {
+			continue
+		}
+
 		p, ok := pather.(*Tile)
 		if !ok {
 			panic("AAAAAA!!!")
@@ -120,11 +156,13 @@ type Tile struct {
 }
 
 func (t *Tile) PathNeighbors() []astar.Pather {
-	neighborCells := t.Area.GetFreeNeighborCells(t.Cell)
+	neighborCells := t.Cell.Neighbors
 
 	var neighbors []astar.Pather
 	for _, cell := range neighborCells {
-		neighbors = append(neighbors, &Tile{Cell: cell, Area: t.Area})
+		if cell.IsFree() {
+			neighbors = append(neighbors, AStarArea[cell.Coords.Y][cell.Coords.X])
+		}
 	}
 
 	return neighbors

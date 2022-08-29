@@ -42,10 +42,11 @@ func (gp *GamePage) Render(l *Launcher) {
 
 	l.cv.SetStrokeStyle("#FFF001")
 	l.cv.SetLineWidth(1)
-	for i := 0; i < 20+1; i++ {
+	for i := 0; i < AreaCellCountW+1; i++ {
 		l.cv.MoveTo(gp.gameAreaSP.X+float64(i)*gp.cellW, gp.gameAreaSP.Y)
 		l.cv.LineTo(gp.gameAreaSP.X+float64(i)*gp.cellW, gp.gameAreaEP.Y)
-
+	}
+	for i := 0; i < AreaCellCountH+1; i++ {
 		l.cv.MoveTo(gp.gameAreaSP.X, gp.gameAreaSP.Y+float64(i)*gp.cellH)
 		l.cv.LineTo(gp.gameAreaEP.X, gp.gameAreaSP.Y+float64(i)*gp.cellH)
 	}
