@@ -3,19 +3,18 @@ package snake
 import (
 	"fmt"
 	"github.com/tfriedel6/canvas"
+	"snake/src/geom"
 )
 
 const (
-	AreaW          = float64(720)
-	AreaH          = float64(720)
-	AreaCellCountW = 20
-	AreaCellCountH = 20
+	AreaW = float64(720)
+	AreaH = float64(720)
 )
 
 type GamePage struct {
 	Game       *Game
-	gameAreaSP Point
-	gameAreaEP Point
+	gameAreaSP geom.Point
+	gameAreaEP geom.Point
 	cellW      float64
 	cellH      float64
 }
@@ -24,8 +23,8 @@ func getGamePage(payerCounts int) *GamePage {
 	return &GamePage{
 		Game: NewGame(payerCounts),
 
-		gameAreaSP: Point{15, 15},
-		gameAreaEP: Point{15 + AreaW, 15 + AreaH},
+		gameAreaSP: geom.Point{X: 15, Y: 15},
+		gameAreaEP: geom.Point{X: 15 + AreaW, Y: 15 + AreaH},
 
 		cellW: AreaW / AreaCellCountW,
 		cellH: AreaH / AreaCellCountH,
@@ -57,8 +56,8 @@ func (gp *GamePage) Render(l *Launcher) {
 		l.cv.SetFillStyle(snake.Color)
 		for _, p := range snake.Parts {
 			l.cv.FillRect(
-				gp.gameAreaSP.X+p.X*gp.cellW+1,
-				gp.gameAreaSP.Y+p.Y*gp.cellH+1,
+				gp.gameAreaSP.X+float64(p.X)*gp.cellW+1,
+				gp.gameAreaSP.Y+float64(p.Y)*gp.cellH+1,
 				gp.cellW-1*2,
 				gp.cellH-1*2,
 			)
@@ -69,8 +68,8 @@ func (gp *GamePage) Render(l *Launcher) {
 	l.cv.SetFillStyle("#F15555")
 	for _, p := range gp.Game.food {
 		l.cv.FillRect(
-			gp.gameAreaSP.X+p.X*gp.cellW+1,
-			gp.gameAreaSP.Y+p.Y*gp.cellH+1,
+			gp.gameAreaSP.X+float64(p.X)*gp.cellW+1,
+			gp.gameAreaSP.Y+float64(p.Y)*gp.cellH+1,
 			gp.cellW-1*2,
 			gp.cellH-1*2,
 		)
@@ -105,6 +104,18 @@ func (gp *GamePage) Render(l *Launcher) {
 		l.cv.SetFont(l.font, 30)
 		lineY += 50
 		l.cv.FillText("Enter to return", lineX, lineY)
+	}
+
+	l.cv.SetFillStyle("#FFF")
+	l.cv.SetFont(l.font, 10)
+	lineY = wH - 200
+	for _, row := range gp.Game.Area.Area {
+		line := ""
+		for _, cell := range row {
+			line += fmt.Sprintf("%d ", cell.Content)
+		}
+		l.cv.FillText(line, lineX, lineY)
+		lineY += 10
 	}
 
 	l.cv.Stroke()

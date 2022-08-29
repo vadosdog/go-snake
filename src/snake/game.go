@@ -2,17 +2,20 @@ package snake
 
 import (
 	"math/rand"
+	"snake/src/bots"
+	"snake/src/geom"
 	"sort"
 	"time"
 )
 
 const (
-	GameW     = float64(720)
-	GameH     = float64(720)
 	SpeedStep = 10
 
 	SinglePlayer = iota
 	MultiPlayer  = iota
+
+	AreaCellCountW = 20
+	AreaCellCountH = 20
 )
 
 type Game struct {
@@ -20,24 +23,28 @@ type Game struct {
 	gameOver bool
 	speed    int
 
-	food         []Point
+	food         []geom.Cell
 	playersCount int
 
 	mode int
+
+	Area geom.Area
 }
 
 func NewGame(playerCounts int) *Game {
 	var snakes []*Snake
-	snakes = []*Snake{NewSnake("Player 1", "#fff", Point{1, 1}, Right, map[int]Dir{CodeLeft: Left, CodeRight: Right, CodeUp: Top, CodeDown: Bottom})}
+	snakes = []*Snake{NewSnake("Player 1", "#fff", geom.Cell{X: 1, Y: 1}, geom.Right, map[int]geom.Dir{CodeLeft: geom.Left, CodeRight: geom.Right, CodeUp: geom.Top, CodeDown: geom.Bottom})}
+	// refactor
+	snakes[0].SetBot(&bots.RandomBot{})
 
 	if playerCounts >= 2 {
-		snakes = append(snakes, NewSnake("Player 2", "#ff0", Point{18, 18}, Left, map[int]Dir{CodeA: Left, CodeD: Right, CodeW: Top, CodeS: Bottom}))
+		snakes = append(snakes, NewSnake("Player 2", "#ff0", geom.Cell{X: 18, Y: 18}, geom.Left, map[int]geom.Dir{CodeA: geom.Left, CodeD: geom.Right, CodeW: geom.Top, CodeS: geom.Bottom}))
 	}
 	if playerCounts >= 3 {
-		snakes = append(snakes, NewSnake("Player 3", "#f00", Point{1, 18}, Top, map[int]Dir{CodeNum4: Left, CodeNum6: Right, CodeNum8: Top, CodeNum5: Bottom}))
+		snakes = append(snakes, NewSnake("Player 3", "#f00", geom.Cell{X: 1, Y: 18}, geom.Top, map[int]geom.Dir{CodeNum4: geom.Left, CodeNum6: geom.Right, CodeNum8: geom.Top, CodeNum5: geom.Bottom}))
 	}
 	if playerCounts == 4 {
-		snakes = append(snakes, NewSnake("Player 4", "#f0f", Point{18, 1}, Bottom, map[int]Dir{CodeJ: Left, CodeL: Right, CodeI: Top, CodeK: Bottom}))
+		snakes = append(snakes, NewSnake("Player 4", "#f0f", geom.Cell{X: 18, Y: 1}, geom.Bottom, map[int]geom.Dir{CodeJ: geom.Left, CodeL: geom.Right, CodeI: geom.Top, CodeK: geom.Bottom}))
 	}
 
 	gameMode := SinglePlayer
@@ -53,23 +60,19 @@ func NewGame(playerCounts int) *Game {
 		mode:         gameMode,
 	}
 
+	g.fillArea()
+
 	return g
 }
 
 func (g *Game) HandleKeyDown(code int, gp *GamePage) {
 	for _, snake := range g.Snakes {
-		if snake.NeedMove {
-			continue
-		}
 		newDir, ok := snake.Controllers[code]
 		if !ok {
 			continue
 		}
 
-		if newDir != snake.Dir && !snake.Dir.CheckReverse(newDir) {
-			snake.Dir = newDir
-			snake.NeedMove = true
-		}
+		snake.ChangeDir(newDir)
 	}
 }
 
@@ -88,7 +91,7 @@ func (g *Game) foodGeneration() {
 			randX := rand.Intn(20)
 			randY := rand.Intn(20)
 
-			newPoint := Point{float64(randX), float64(randY)}
+			newPoint := geom.Cell{X: randX, Y: randY}
 
 			check := true
 
@@ -125,7 +128,6 @@ func (g *Game) Run() {
 //
 func (g *Game) snakeMovement() {
 	var snakeTimer *time.Timer
-	//var snakeLock sync.Mutex
 
 	resetTimer := func() {
 		snakeTimer = time.NewTimer(time.Duration(g.speed) * time.Millisecond)
@@ -144,6 +146,10 @@ func (g *Game) snakeMovement() {
 		for _, snake := range g.Snakes {
 			if snake.IsLose {
 				continue
+			}
+
+			if snake.isAi {
+				snake.ChangeDir(snake.bot.WhatsNext(g.Area, snake.Head()))
 			}
 
 			newPos := snake.Dir.Exec(snake.Head())
@@ -218,6 +224,7 @@ func (g *Game) snakeMovement() {
 			g.gameOver = true
 		}
 
+		g.fillArea()
 		resetTimer()
 	}
 }
@@ -231,4 +238,30 @@ func (g *Game) getSortedSnakes() []*Snake {
 	})
 
 	return sorted
+}
+
+func (g *Game) fillArea() {
+	if g.gameOver {
+		return
+	}
+	var rows [][]geom.Cell
+	for y := 0; y < AreaCellCountH; y++ {
+		var row []geom.Cell
+		for x := 0; x < AreaCellCountW; x++ {
+			row = append(row, geom.Cell{Content: geom.EmptyCell, X: x, Y: y})
+		}
+		rows = append(rows, row)
+	}
+
+	for _, snake := range g.Snakes {
+		for _, point := range snake.Parts {
+			rows[int(point.Y)][int(point.X)] = geom.Cell{Content: geom.SnakeCell, X: int(point.X), Y: int(point.Y)}
+		}
+	}
+
+	for _, point := range g.food {
+		rows[int(point.Y)][int(point.X)] = geom.Cell{Content: geom.FoodCell, X: int(point.X), Y: int(point.Y)}
+	}
+
+	g.Area = geom.Area{Area: rows}
 }

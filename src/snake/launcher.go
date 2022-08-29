@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	WELCOME_PAGE = iota
-	GAME_PAGE    = iota
+	wW = 1080
+	wH = 750
 )
 
 type Launcher struct {
@@ -26,7 +26,7 @@ type Page interface {
 }
 
 func NewLauncher() *Launcher {
-	wnd, cv, err := sdlcanvas.CreateWindow(1080, 750, "Hello, snake")
+	wnd, cv, err := sdlcanvas.CreateWindow(wW, wH, "Go, snake, go!")
 
 	if err != nil {
 		panic(err)
