@@ -8,7 +8,7 @@ import (
 const BaseLen = 5
 
 type Snake struct {
-	Parts       []geom.Cell
+	Parts       []geom.Coords
 	Color       string
 	Dir         geom.Dir
 	NeedMove    bool
@@ -20,7 +20,7 @@ type Snake struct {
 	isAi        bool
 }
 
-func NewSnake(name string, color string, point geom.Cell, dir geom.Dir, controllers map[int]geom.Dir) *Snake {
+func NewSnake(name string, color string, point geom.Coords, dir geom.Dir, controllers map[int]geom.Dir) *Snake {
 	snake := &Snake{Color: color, Dir: dir, Controllers: controllers, Name: name}
 	snake.Reset(point)
 	return snake
@@ -41,28 +41,27 @@ func (s *Snake) Len() int {
 	return len(s.Parts)
 }
 
-func (s *Snake) Head() geom.Cell {
+func (s *Snake) Head() geom.Coords {
 	if s.Len() == 0 {
-		return geom.Cell{X: -1, Y: -1, Content: geom.SnakeCell}
+		return geom.Coords{X: -1, Y: -1}
 	}
 
 	return s.Parts[0]
 }
 
-func (s *Snake) Tail() geom.Cell {
+func (s *Snake) Tail() geom.Coords {
 	if s.Len() == 0 {
-		return geom.Cell{X: -1, Y: -1, Content: geom.SnakeCell}
+		return geom.Coords{X: -1, Y: -1}
 	}
 
 	return s.Parts[s.Len()-1]
 }
 
-func (s *Snake) Add(p geom.Cell) {
-	p.Content = geom.SnakeCell
-	s.Parts = append([]geom.Cell{p}, s.Parts...)
+func (s *Snake) Add(p geom.Coords) {
+	s.Parts = append([]geom.Coords{p}, s.Parts...)
 }
 
-func (s *Snake) IsSnake(p geom.Cell) bool {
+func (s *Snake) IsSnake(p geom.Coords) bool {
 	for _, i := range s.Parts {
 		if i == p {
 			return true
@@ -71,7 +70,7 @@ func (s *Snake) IsSnake(p geom.Cell) bool {
 	return false
 }
 
-func (s *Snake) IsSnakeTail(p geom.Cell) bool {
+func (s *Snake) IsSnakeTail(p geom.Coords) bool {
 	for _, i := range s.Parts[1:] {
 		if i == p {
 			return true
@@ -80,7 +79,7 @@ func (s *Snake) IsSnakeTail(p geom.Cell) bool {
 	return false
 }
 
-func (s *Snake) CutIfSnake(p geom.Cell) bool {
+func (s *Snake) CutIfSnake(p geom.Coords) bool {
 	i := 0
 	for ; i < s.Len(); i++ {
 		if s.Parts[i] == p {
@@ -97,19 +96,19 @@ func (s *Snake) CutIfSnake(p geom.Cell) bool {
 	return true
 }
 
-func (s *Snake) Reset(point geom.Cell) {
+func (s *Snake) Reset(point geom.Coords) {
 	sx, sy, l := point.X, point.Y, BaseLen
-	s.Parts = []geom.Cell{}
+	s.Parts = []geom.Coords{}
 	for i := l - 1; i >= 0; i-- {
 		switch s.Dir {
 		case geom.Left:
-			s.Parts = append(s.Parts, geom.Cell{X: sx - i, Y: sy, Content: geom.SnakeCell})
+			s.Parts = append(s.Parts, geom.Coords{X: sx - i, Y: sy})
 		case geom.Top:
-			s.Parts = append(s.Parts, geom.Cell{X: sx, Y: sy - i, Content: geom.SnakeCell})
+			s.Parts = append(s.Parts, geom.Coords{X: sx, Y: sy - i})
 		case geom.Right:
-			s.Parts = append(s.Parts, geom.Cell{X: sx + i, Y: sy, Content: geom.SnakeCell})
+			s.Parts = append(s.Parts, geom.Coords{X: sx + i, Y: sy})
 		case geom.Bottom:
-			s.Parts = append(s.Parts, geom.Cell{X: sx, Y: sy + i, Content: geom.SnakeCell})
+			s.Parts = append(s.Parts, geom.Coords{X: sx, Y: sy + i})
 		}
 	}
 }

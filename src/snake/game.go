@@ -23,28 +23,28 @@ type Game struct {
 	gameOver bool
 	speed    int
 
-	food         []geom.Cell
+	food         []geom.Coords
 	playersCount int
 
 	mode int
 
-	Area geom.Area
+	Area *geom.Area
 }
 
 func NewGame(playerCounts int) *Game {
 	var snakes []*Snake
-	snakes = []*Snake{NewSnake("Player 1", "#fff", geom.Cell{X: 1, Y: 1}, geom.Right, map[int]geom.Dir{CodeLeft: geom.Left, CodeRight: geom.Right, CodeUp: geom.Top, CodeDown: geom.Bottom})}
+	snakes = []*Snake{NewSnake("Player 1", "#fff", geom.Coords{X: 1, Y: 1}, geom.Right, map[int]geom.Dir{CodeLeft: geom.Left, CodeRight: geom.Right, CodeUp: geom.Top, CodeDown: geom.Bottom})}
 	// refactor
-	snakes[0].SetBot(&bots.RandomBot{})
+	snakes[0].SetBot(&bots.AStarBot{})
 
 	if playerCounts >= 2 {
-		snakes = append(snakes, NewSnake("Player 2", "#ff0", geom.Cell{X: 18, Y: 18}, geom.Left, map[int]geom.Dir{CodeA: geom.Left, CodeD: geom.Right, CodeW: geom.Top, CodeS: geom.Bottom}))
+		snakes = append(snakes, NewSnake("Player 2", "#ff0", geom.Coords{X: 18, Y: 18}, geom.Left, map[int]geom.Dir{CodeA: geom.Left, CodeD: geom.Right, CodeW: geom.Top, CodeS: geom.Bottom}))
 	}
 	if playerCounts >= 3 {
-		snakes = append(snakes, NewSnake("Player 3", "#f00", geom.Cell{X: 1, Y: 18}, geom.Top, map[int]geom.Dir{CodeNum4: geom.Left, CodeNum6: geom.Right, CodeNum8: geom.Top, CodeNum5: geom.Bottom}))
+		snakes = append(snakes, NewSnake("Player 3", "#f00", geom.Coords{X: 1, Y: 18}, geom.Top, map[int]geom.Dir{CodeNum4: geom.Left, CodeNum6: geom.Right, CodeNum8: geom.Top, CodeNum5: geom.Bottom}))
 	}
 	if playerCounts == 4 {
-		snakes = append(snakes, NewSnake("Player 4", "#f0f", geom.Cell{X: 18, Y: 1}, geom.Bottom, map[int]geom.Dir{CodeJ: geom.Left, CodeL: geom.Right, CodeI: geom.Top, CodeK: geom.Bottom}))
+		snakes = append(snakes, NewSnake("Player 4", "#f0f", geom.Coords{X: 18, Y: 1}, geom.Bottom, map[int]geom.Dir{CodeJ: geom.Left, CodeL: geom.Right, CodeI: geom.Top, CodeK: geom.Bottom}))
 	}
 
 	gameMode := SinglePlayer
@@ -58,6 +58,7 @@ func NewGame(playerCounts int) *Game {
 		gameOver:     false,
 		playersCount: playerCounts,
 		mode:         gameMode,
+		Area:         geom.CreateArea(AreaCellCountW, AreaCellCountH),
 	}
 
 	g.fillArea()
@@ -91,7 +92,7 @@ func (g *Game) foodGeneration() {
 			randX := rand.Intn(20)
 			randY := rand.Intn(20)
 
-			newPoint := geom.Cell{X: randX, Y: randY}
+			newPoint := geom.Coords{X: randX, Y: randY}
 
 			check := true
 
@@ -104,7 +105,7 @@ func (g *Game) foodGeneration() {
 
 			if !check {
 				for _, p := range g.food {
-					if p.X == newPoint.X && p.Y == newPoint.Y {
+					if p == newPoint {
 						check = false
 						break
 					}
@@ -149,7 +150,8 @@ func (g *Game) snakeMovement() {
 			}
 
 			if snake.isAi {
-				snake.ChangeDir(snake.bot.WhatsNext(g.Area, snake.Head()))
+				head := snake.Head()
+				snake.ChangeDir(snake.bot.WhatsNext(g.Area, g.Area.Area[head.Y][head.X], snake.Dir))
 			}
 
 			newPos := snake.Dir.Exec(snake.Head())
@@ -244,24 +246,21 @@ func (g *Game) fillArea() {
 	if g.gameOver {
 		return
 	}
-	var rows [][]geom.Cell
-	for y := 0; y < AreaCellCountH; y++ {
-		var row []geom.Cell
-		for x := 0; x < AreaCellCountW; x++ {
-			row = append(row, geom.Cell{Content: geom.EmptyCell, X: x, Y: y})
-		}
-		rows = append(rows, row)
-	}
 
+	// reset area
+	g.Area.ForEach(func(x int, y int, c *geom.Cell) {
+		c.Content = geom.EmptyCell
+	})
+
+	// fill snakes
 	for _, snake := range g.Snakes {
 		for _, point := range snake.Parts {
-			rows[int(point.Y)][int(point.X)] = geom.Cell{Content: geom.SnakeCell, X: int(point.X), Y: int(point.Y)}
+			g.Area.Area[point.Y][point.X].Content = geom.SnakeCell
 		}
 	}
 
+	// fill food
 	for _, point := range g.food {
-		rows[int(point.Y)][int(point.X)] = geom.Cell{Content: geom.FoodCell, X: int(point.X), Y: int(point.Y)}
+		g.Area.Area[point.Y][point.X].Content = geom.FoodCell
 	}
-
-	g.Area = geom.Area{Area: rows}
 }

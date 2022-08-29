@@ -5,5 +5,5 @@ import (
 )
 
 type Bot interface {
-	WhatsNext(area geom.Area, head geom.Cell) geom.Dir
+	WhatsNext(area *geom.Area, head *geom.Cell, defaultDir geom.Dir) geom.Dir
 }

@@ -3,6 +3,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:8192a636c0aa974de60b8e39f453455c2fbc7dc4681f763208d5dea097a1d8d1"
+  name = "github.com/beefsack/go-astar"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "4ecf9e3044829f1e2d9eba4ff26295a2bbb9b2cd"
+
+[[projects]]
+  branch = "master"
   digest = "1:2e9aa0f821cabc27583176b1157202e565d39263092c5dc4eeddeb9f0a25f5ca"
   name = "github.com/go-gl/gl"
   packages = [
@@ -60,6 +68,10 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = ["github.com/tfriedel6/canvas/sdlcanvas"]
+  input-imports = [
+    "github.com/beefsack/go-astar",
+    "github.com/tfriedel6/canvas",
+    "github.com/tfriedel6/canvas/sdlcanvas",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
